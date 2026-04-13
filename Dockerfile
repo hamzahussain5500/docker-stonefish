@@ -75,6 +75,6 @@ RUN mkdir -p /root/ros2_ws/src \
 
 # ── 7. Source ROS2 and workspace in every bash session ───────────────────────
 RUN echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc \
-    && echo "source /root/ros2_ws/install/setup.bash" >> /root/.bashrc
+    && echo "[ -f /root/ros2_ws/install/setup.bash ] && source /root/ros2_ws/install/setup.bash" >> /root/.bashrc
 
 CMD ["/bin/bash"]

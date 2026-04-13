@@ -48,6 +48,16 @@ docker compose up -d
 docker compose exec ros2-jazzy bash
 ```
 
+The compose file bind-mounts your host workspace folder `../ros2_ws` into the container at `/root/ros2_ws`, so anything you edit in VS Code is visible in the container (and vice versa).
+
+If this host workspace is new/empty, build it once inside the container:
+
+```bash
+source /opt/ros/jazzy/setup.bash
+cd /root/ros2_ws
+colcon build --cmake-args -DCMAKE_BUILD_TYPE=Release
+```
+
 ## Verify inside the container
 
 ```bash
