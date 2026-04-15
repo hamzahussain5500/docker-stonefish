@@ -22,6 +22,17 @@ services:
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - ./files:/root/sim_files:ro
+      - /dev/input:/dev/input
+
+    # Allow access to all input devices (joystick js*, event*)
+    # Major device number 13 covers all /dev/input/* character devices
+    device_cgroup_rules:
+      - 'c 13:* rmw'
+
+    # Add the host 'input' group so the container can read joystick devices
+    group_add:
+      - "107"
 
     deploy:
       resources:

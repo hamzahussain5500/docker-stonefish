@@ -1,0 +1,243 @@
+<?xml version="1.0"?>
+<scenario>
+
+  <!-- ── Environment ──────────────────────────────────────────────────────── -->
+  <environment>
+    <ned latitude="41.7777" longitude="3.0333"/>
+    <ocean>
+      <water density="1031.0" jerlov="0.15"/>
+      <waves height="0.0"/>
+      <particles enabled="true"/>
+    </ocean>
+    <atmosphere>
+      <sun azimuth="20.0" elevation="50.0"/>
+    </atmosphere>
+  </environment>
+
+  <!-- ── Materials ────────────────────────────────────────────────────────── -->
+  <materials>
+    <material name="Neutral" density="1000.0" restitution="0.5"/>
+    <material name="Rock"    density="3000.0" restitution="0.8"/>
+    <material name="Foam"    density="100.0"  restitution="0.3"/>
+  </materials>
+
+  <!-- ── Looks ────────────────────────────────────────────────────────────── -->
+  <looks>
+    <look name="yellow"  rgb="1.0 0.9 0.0" roughness="0.3"/>
+    <look name="grey"    rgb="0.5 0.5 0.5" roughness="0.6"/>
+    <look name="white"   rgb="0.9 0.9 1.0" roughness="0.4"/>
+    <look name="orange"  rgb="1.0 0.5 0.0" roughness="0.4"/>
+    <look name="darkgrey" rgb="0.3 0.3 0.3" roughness="0.7"/>
+  </looks>
+
+  <!-- ── Static seabed ────────────────────────────────────────────────────── -->
+  <static name="bottom" type="plane">
+    <world_transform rpy="0.0 0.0 0.0" xyz="0.0 0.0 15.0"/>
+    <material name="Rock"/>
+    <look name="grey"/>
+  </static>
+
+  <!-- ── Box obstacle 6 m ahead ───────────────────────────────────────────── -->
+  <static name="obstacle1" type="box">
+    <dimensions xyz="1.5 1.5 1.5"/>
+    <world_transform rpy="0.0 0.0 0.0" xyz="6.0 0.0 5.0"/>
+    <material name="Rock"/>
+    <look name="yellow"/>
+  </static>
+
+  <!-- ── Wall 12 m ahead ──────────────────────────────────────────────────── -->
+  <static name="wall" type="box">
+    <dimensions xyz="0.5 10.0 8.0"/>
+    <world_transform rpy="0.0 0.0 0.0" xyz="12.0 0.0 7.0"/>
+    <material name="Rock"/>
+    <look name="darkgrey"/>
+  </static>
+
+  <!-- ── Small rock on the seabed ─────────────────────────────────────────── -->
+  <static name="rock" type="sphere">
+    <dimensions radius="0.6"/>
+    <world_transform rpy="0.0 0.0 0.0" xyz="4.0 3.0 14.0"/>
+    <material name="Rock"/>
+    <look name="grey"/>
+  </static>
+
+  <!-- ── AUV Robot ────────────────────────────────────────────────────────── -->
+  <robot name="auv" fixed="false" self_collisions="false">
+
+    <!-- Hull: box, nearly neutrally buoyant — hovers underwater without sinking or floating
+         mass=12 kg, volume=0.0120 m³ → displaces 12.37 kg seawater → slight positive buoyancy
+         Vertical thrusters (T_VF, T_VR) maintain depth actively -->
+    <base_link name="base_link" type="box" physics="submerged">
+      <dimensions xyz="0.6 0.35 0.2"/>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <material name="Neutral"/>
+      <look name="white"/>
+      <mass value="12.0"/>
+      <inertia xyz="0.25 0.5 0.5"/>
+      <volume value="0.0120"/>
+      <cob xyz="0.0 0.0 -0.03"/>
+    </base_link>
+
+    <!-- Spawn at 5 m depth, facing the obstacle -->
+    <world_transform xyz="0.0 0.0 5.0" rpy="0.0 0.0 0.0"/>
+
+    <!-- Single Float64MultiArray subscriber for ALL thrusters (indices 0-5 in definition order) -->
+    <ros_subscriber thrusters="/auv/thrusters"/>
+
+    <!-- ────────────────────────────────────────────────────────────────────
+         THRUSTERS — X-configuration (4 horizontal + 2 vertical)
+         Horizontal thrusters provide: surge (forward/back), sway (left/right), yaw
+         Vertical thrusters provide:   heave (up/down)
+
+         ROS topic: /auv/thrusters  (Float64MultiArray, indices 0-5)
+           index 0 = T_FR  front-right  horizontal
+           index 1 = T_FL  front-left   horizontal
+           index 2 = T_RR  rear-right   horizontal
+           index 3 = T_RL  rear-left    horizontal
+           index 4 = T_VF  vertical-front
+           index 5 = T_VR  vertical-rear
+    ──────────────────────────────────────────────────────────────────────── -->
+
+    <!-- T0: Front-Right horizontal (+45°) -->
+    <actuator name="T_FR" type="thruster">
+      <origin rpy="0.0 0.0 0.785" xyz="0.22 -0.14 0.0"/>
+      <specs max_setpoint="600.0" inverted_setpoint="false" normalized_setpoint="true"/>
+      <propeller diameter="0.07" right="true">
+        <mesh filename="propeller.obj" scale="0.07"/>
+        <material name="Neutral"/>
+        <look name="darkgrey"/>
+      </propeller>
+      <rotor_dynamics type="first_order">
+        <time_constant value="0.2"/>
+      </rotor_dynamics>
+      <thrust_model type="fluid_dynamics">
+        <thrust_coeff forward="0.11" reverse="0.07"/>
+        <torque_coeff value="0.015"/>
+      </thrust_model>
+      <link name="base_link"/>
+    </actuator>
+
+    <!-- T1: Front-Left horizontal (-45°) -->
+    <actuator name="T_FL" type="thruster">
+      <origin rpy="0.0 0.0 -0.785" xyz="0.22 0.14 0.0"/>
+      <specs max_setpoint="600.0" inverted_setpoint="false" normalized_setpoint="true"/>
+      <propeller diameter="0.07" right="false">
+        <mesh filename="propeller.obj" scale="0.07"/>
+        <material name="Neutral"/>
+        <look name="darkgrey"/>
+      </propeller>
+      <rotor_dynamics type="first_order">
+        <time_constant value="0.2"/>
+      </rotor_dynamics>
+      <thrust_model type="fluid_dynamics">
+        <thrust_coeff forward="0.11" reverse="0.07"/>
+        <torque_coeff value="0.015"/>
+      </thrust_model>
+      <link name="base_link"/>
+    </actuator>
+
+    <!-- T2: Rear-Right horizontal (-45°) -->
+    <actuator name="T_RR" type="thruster">
+      <origin rpy="0.0 0.0 -0.785" xyz="-0.22 -0.14 0.0"/>
+      <specs max_setpoint="600.0" inverted_setpoint="false" normalized_setpoint="true"/>
+      <propeller diameter="0.07" right="false">
+        <mesh filename="propeller.obj" scale="0.07"/>
+        <material name="Neutral"/>
+        <look name="darkgrey"/>
+      </propeller>
+      <rotor_dynamics type="first_order">
+        <time_constant value="0.2"/>
+      </rotor_dynamics>
+      <thrust_model type="fluid_dynamics">
+        <thrust_coeff forward="0.11" reverse="0.07"/>
+        <torque_coeff value="0.015"/>
+      </thrust_model>
+      <link name="base_link"/>
+    </actuator>
+
+    <!-- T3: Rear-Left horizontal (+45°) -->
+    <actuator name="T_RL" type="thruster">
+      <origin rpy="0.0 0.0 0.785" xyz="-0.22 0.14 0.0"/>
+      <specs max_setpoint="600.0" inverted_setpoint="false" normalized_setpoint="true"/>
+      <propeller diameter="0.07" right="true">
+        <mesh filename="propeller.obj" scale="0.07"/>
+        <material name="Neutral"/>
+        <look name="darkgrey"/>
+      </propeller>
+      <rotor_dynamics type="first_order">
+        <time_constant value="0.2"/>
+      </rotor_dynamics>
+      <thrust_model type="fluid_dynamics">
+        <thrust_coeff forward="0.11" reverse="0.07"/>
+        <torque_coeff value="0.015"/>
+      </thrust_model>
+      <link name="base_link"/>
+    </actuator>
+
+    <!-- T4: Vertical-Front (pointing down → push up when positive) -->
+    <actuator name="T_VF" type="thruster">
+      <origin rpy="0.0 -1.5708 0.0" xyz="0.15 0.0 -0.1"/>
+      <specs max_setpoint="600.0" inverted_setpoint="false" normalized_setpoint="true"/>
+      <propeller diameter="0.07" right="true">
+        <mesh filename="propeller.obj" scale="0.07"/>
+        <material name="Neutral"/>
+        <look name="orange"/>
+      </propeller>
+      <rotor_dynamics type="first_order">
+        <time_constant value="0.2"/>
+      </rotor_dynamics>
+      <thrust_model type="fluid_dynamics">
+        <thrust_coeff forward="0.11" reverse="0.07"/>
+        <torque_coeff value="0.015"/>
+      </thrust_model>
+      <link name="base_link"/>
+    </actuator>
+
+    <!-- T5: Vertical-Rear -->
+    <actuator name="T_VR" type="thruster">
+      <origin rpy="0.0 -1.5708 0.0" xyz="-0.15 0.0 -0.1"/>
+      <specs max_setpoint="600.0" inverted_setpoint="false" normalized_setpoint="true"/>
+      <propeller diameter="0.07" right="true">
+        <mesh filename="propeller.obj" scale="0.07"/>
+        <material name="Neutral"/>
+        <look name="orange"/>
+      </propeller>
+      <rotor_dynamics type="first_order">
+        <time_constant value="0.2"/>
+      </rotor_dynamics>
+      <thrust_model type="fluid_dynamics">
+        <thrust_coeff forward="0.11" reverse="0.07"/>
+        <torque_coeff value="0.015"/>
+      </thrust_model>
+      <link name="base_link"/>
+    </actuator>
+
+    <!-- ── FLS Sonar (nose-mounted, 120° fan) ───────────────────────────── -->
+    <sensor name="FLS" type="fls" rate="5.0">
+      <specs beams="256" bins="300" horizontal_fov="120.0" vertical_fov="20.0" output_format="uint8"/>
+      <settings range_min="0.2" range_max="20.0" gain="1.1"/>
+      <noise multiplicative="0.03" additive="0.05"/>
+      <display colormap="hot"/>
+      <origin xyz="0.3 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <link name="base_link"/>
+      <ros_publisher topic="/auv/fls"/>
+    </sensor>
+
+    <!-- ── IMU ──────────────────────────────────────────────────────────── -->
+    <sensor name="IMU" type="imu" rate="50.0">
+      <noise linear_velocity="0.0" angular_velocity="0.0003" yaw_drift="0.0001"/>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <link name="base_link"/>
+      <ros_publisher topic="/auv/imu"/>
+    </sensor>
+
+    <!-- ── Ground-truth odometry ─────────────────────────────────────────── -->
+    <sensor name="Odometry" type="odometry" rate="10.0">
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 0.0 0.0"/>
+      <link name="base_link"/>
+      <ros_publisher topic="/auv/odometry"/>
+    </sensor>
+
+  </robot>
+
+</scenario>
