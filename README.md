@@ -93,67 +93,6 @@ ros2 pkg list | grep sonar_demo     # sonar demo ready
 
 ---
 
-## Run the FLS sonar demo
-
-```bash
-# Inside the container
-ros2 launch sonar_demo sonar_demo.launch.py
-```
-
-Two windows open:
-- **Stonefish 3D renderer** — shows the underwater scene with the AUV and a box obstacle 5 m ahead
-- **RViz2** — add the sonar topic here to visualize the data
-
-### Visualize sonar output in RViz2
-
-1. In RViz2, set **Fixed Frame** → `world`
-2. Click **Add** → **By topic** → `/auv/fls` → select **Image**
-3. The sonar fan image appears — bright returns = detected objects
-
-Or use rqt in a second terminal:
-
-```bash
-docker compose exec ros2-jazzy bash
-ros2 run rqt_image_view rqt_image_view /auv/fls
-```
-
-### Published topics
-
-| Topic | Type | Rate | Description |
-|---|---|---|---|
-| `/auv/fls` | `sensor_msgs/Image` | 5 Hz | FLS sonar intensity image |
-| `/auv/imu` | `sensor_msgs/Imu` | 50 Hz | IMU orientation + angular velocity |
-| `/auv/odometry` | `nav_msgs/Odometry` | 10 Hz | Ground-truth pose |
-
----
-
-## Sonar scenario explained
-
-The demo scene (`files/sonar_demo.scn`) contains:
-
-- **Seabed** — flat plane at 10 m depth
-- **Obstacle** — 1 m³ box placed 5 m ahead of the robot at 5 m depth
-- **AUV** — box-shaped robot spawned at 3 m depth facing the obstacle
-- **FLS sensor** — mounted on the robot nose, 120° horizontal fan, 20° vertical, 0.2–20 m range
-
-The obstacle appears as a bright arc in the sonar image at roughly 5 m range.
-
-### FLS parameter reference
-
-| Parameter | Value | Meaning |
-|---|---|---|
-| `beams` | 256 | Angular resolution of the fan |
-| `bins` | 300 | Range resolution (samples per beam) |
-| `horizontal_fov` | 120° | Width of the sonar fan |
-| `vertical_fov` | 20° | Vertical aperture |
-| `range_min/max` | 0.2–20 m | Detection range |
-| `gain` | 1.1 | Echo amplification |
-| `multiplicative` noise | 0.03 | 3% proportional noise |
-| `additive` noise | 0.05 | Background noise floor |
-| `colormap` | `hot` | Display colour (hot = black→red→yellow→white) |
-
----
-
 ## Editing the MBARI workspace
 
 The MBARI repo lives on your **host** at `optitrack-roboticslab-ws/MBARI-vehicles-sim-ros2/` and is bind-mounted read-write into the container at `/root/MBARI-vehicles-sim-ros2`. Edits you make on the host (or inside the container) are immediately visible on both sides and survive `docker compose down`.
@@ -200,6 +139,70 @@ No `docker compose build` needed — only do that when you change the Dockerfile
 | Stale overlays after a rebuild | If you run `docker compose build` and the image changes, open a fresh shell so `.bashrc` is re-evaluated. |
 
 ---
+
+
+## Run the FLS sonar demo (not tested, doesnt work)
+
+```bash
+# Inside the container
+ros2 launch sonar_demo sonar_demo.launch.py
+```
+
+Two windows open:
+- **Stonefish 3D renderer** — shows the underwater scene with the AUV and a box obstacle 5 m ahead
+- **RViz2** — add the sonar topic here to visualize the data
+
+### Visualize sonar output in RViz2 (not tested)
+
+1. In RViz2, set **Fixed Frame** → `world`
+2. Click **Add** → **By topic** → `/auv/fls` → select **Image**
+3. The sonar fan image appears — bright returns = detected objects
+
+Or use rqt in a second terminal:
+
+```bash
+docker compose exec ros2-jazzy bash
+ros2 run rqt_image_view rqt_image_view /auv/fls
+```
+
+### Published topics (unsure)
+
+| Topic | Type | Rate | Description |
+|---|---|---|---|
+| `/auv/fls` | `sensor_msgs/Image` | 5 Hz | FLS sonar intensity image |
+| `/auv/imu` | `sensor_msgs/Imu` | 50 Hz | IMU orientation + angular velocity |
+| `/auv/odometry` | `nav_msgs/Odometry` | 10 Hz | Ground-truth pose |
+
+---
+
+## Sonar scenario explained (RECHECK)
+
+The demo scene (`files/sonar_demo.scn`) contains:
+
+- **Seabed** — flat plane at 10 m depth
+- **Obstacle** — 1 m³ box placed 5 m ahead of the robot at 5 m depth
+- **AUV** — box-shaped robot spawned at 3 m depth facing the obstacle
+- **FLS sensor** — mounted on the robot nose, 120° horizontal fan, 20° vertical, 0.2–20 m range
+
+The obstacle appears as a bright arc in the sonar image at roughly 5 m range.
+
+### FLS parameter reference (???)
+
+| Parameter | Value | Meaning |
+|---|---|---|
+| `beams` | 256 | Angular resolution of the fan |
+| `bins` | 300 | Range resolution (samples per beam) |
+| `horizontal_fov` | 120° | Width of the sonar fan |
+| `vertical_fov` | 20° | Vertical aperture |
+| `range_min/max` | 0.2–20 m | Detection range |
+| `gain` | 1.1 | Echo amplification |
+| `multiplicative` noise | 0.03 | 3% proportional noise |
+| `additive` noise | 0.05 | Background noise floor |
+| `colormap` | `hot` | Display colour (hot = black→red→yellow→white) |
+
+---
+
+
 
 ## Add your own scenario
 
