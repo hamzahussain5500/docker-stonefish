@@ -18,12 +18,21 @@ services:
       NVIDIA_VISIBLE_DEVICES: all
       NVIDIA_DRIVER_CAPABILITIES: graphics,utility,compute
       ROS_DOMAIN_ID: ${ROS_DOMAIN_ID}
+      ROS_LOCALHOST_ONLY: ${ROS_LOCALHOST_ONLY}
       RMW_IMPLEMENTATION: ${RMW_IMPLEMENTATION}
+      # Hardcoded to the container-internal mount path so host env vars
+      # (e.g. CYCLONEDDS_URI exported in a dev shell) can never override them.
+      FASTDDS_DEFAULT_PROFILES_FILE: /dds_profiles/fastdds_profile.xml
+      CYCLONEDDS_URI: "file:///dds_profiles/cyclonedds_profile.xml"
+      RMW_ZENOH_CONFIG_FILE: /dds_profiles/zenoh_config.json5
 
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./files:/root/sim_files:ro
       - /dev/input:/dev/input
+      - /home/hamza/cub_marine/shapes:/home/hamza/cub_marine/shapes:ro
+      - ./dds_profiles:/dds_profiles:ro
+      - ../MBARI-vehicles-sim-ros2:/root/MBARI-vehicles-sim-ros2
 
     # Allow access to all input devices (joystick js*, event*)
     # Major device number 13 covers all /dev/input/* character devices
@@ -45,5 +54,4 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
-
-    
+    command: /usr/bin/supervisord -c /etc/supervisor/supervisord.conf

@@ -1,0 +1,10 @@
+# colcon build artifacts
+MBARI-vehicles-sim-ros2/build/
+MBARI-vehicles-sim-ros2/install/
+MBARI-vehicles-sim-ros2/log/
+
+# editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store

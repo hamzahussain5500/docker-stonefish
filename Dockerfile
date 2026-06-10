@@ -154,37 +154,34 @@ RUN /bin/bash -c "source /opt/ros/jazzy/setup.bash && \
 RUN echo "source /opt/ros/jazzy/setup.bash" >> /root/.bashrc \
     && echo "[ -f /root/ros2_ws/install/setup.bash ] && source /root/ros2_ws/install/setup.bash" >> /root/.bashrc
 
+# ── 9. Supervisor ────────────────────────────────────────────────────────────
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
 
 # install gazebo and libraries.
-RUN /bin/bash -c "apt update && apt install -y ros-jazzy-ros-gz && \
-    source /opt/ros/jazzy/setup.bash && \
-    git clone https://github.com/libsdl-org/SDL.git -b SDL2 && \
-    cd SDL && \
-    mkdir build && cd build && ../configure && cmake && \
-    make -j$(nproc) && make install && \
-    apt install libfreetype6-dev"
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    ros-jazzy-ros-gz \
+    libfreetype6-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-
-#now setup the MBARI ROS pkg
-
-RUN git clone https://github.com/AlePuglisi/MBARI-vehicles-sim-ros2.git /root/MBARI-vehicles-sim-ros2
-
-RUN /bin/bash -c "source /opt/ros/jazzy/setup.bash && \
-    source /root/ros2_ws/install/setup.bash && \
-    cd /root/MBARI-vehicles-sim-ros2/stonefish_ws && \
-    colcon build && \
-    cd /root/MBARI-vehicles-sim-ros2/gazebo_ws && \
-    source /root/MBARI-vehicles-sim-ros2/stonefish_ws/install/setup.bash && \
-    colcon build"
-
-
-
-RUN echo "source /root/MBARI-vehicles-sim-ros2/stonefish_ws/install/setup.bash" >> ~/.bashrc &&\
-    echo "source /root/MBARI-vehicles-sim-ros2/gazebo_ws/install/setup.bash" >> ~/.bashrc
+# MBARI workspace is bind-mounted from the host at /root/MBARI-vehicles-sim-ros2.
+# Source its install overlays only when they exist (i.e. after the user has run
+# colcon build inside the container for the first time).
+RUN echo '[ -f /root/MBARI-vehicles-sim-ros2/stonefish_ws/install/setup.bash ] && \
+    source /root/MBARI-vehicles-sim-ros2/stonefish_ws/install/setup.bash' >> ~/.bashrc && \
+    echo '[ -f /root/MBARI-vehicles-sim-ros2/gazebo_ws/install/setup.bash ] && \
+    source /root/MBARI-vehicles-sim-ros2/gazebo_ws/install/setup.bash' >> ~/.bashrc
 
 
 
 
 
 
-CMD ["/bin/bash"]
+COPY entrypoint.sh /entrypoint.sh
+COPY supervisord.conf /etc/supervisor/supervisord.conf
+RUN chmod +x /entrypoint.sh && mkdir -p /var/log/supervisor
+
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]

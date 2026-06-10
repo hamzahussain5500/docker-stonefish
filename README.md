@@ -16,14 +16,18 @@ Docker image with **ROS2 Jazzy Desktop** + **Stonefish simulator** built from so
 ## Repository layout
 
 ```
-docker-stonefish/
-├── Dockerfile
-├── docker-compose.yml
-├── .env
-├── README.md
-└── files/
-    ├── sonar_demo.scn          # Stonefish scenario XML
-    └── sonar_demo.launch.py    # ROS2 launch file
+optitrack-roboticslab-ws/
+├── docker-stonefish/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── .env
+│   ├── README.md
+│   └── files/
+│       ├── sonar_demo.scn          # Stonefish scenario XML
+│       └── sonar_demo.launch.py    # ROS2 launch file
+└── MBARI-vehicles-sim-ros2/        # cloned on host, bind-mounted into container
+    ├── stonefish_ws/
+    └── gazebo_ws/
 ```
 
 ---
@@ -51,14 +55,20 @@ sudo systemctl restart docker
 ## Build
 
 ```bash
-# Allow GUI apps to open on your host display
+# 1. Clone MBARI workspace next to docker-stonefish (only needed once)
+cd /home/hamza/cub_marine/optitrack-roboticslab-ws
+git clone https://github.com/AlePuglisi/MBARI-vehicles-sim-ros2.git
+
+# 2. Allow GUI apps to open on your host display
 xhost +local:docker
 
+# 3. Build the image
 cd docker-stonefish
 docker compose build
 ```
 
-The build clones and compiles Stonefish, stonefish_ros2, and the sonar_demo package — expect ~10–20 minutes.
+The build compiles Stonefish, stonefish_ros2, and the sonar_demo package — expect ~10–20 minutes.
+The MBARI workspace is **not** baked into the image; it is bind-mounted from the host (see [Editing the MBARI workspace](#editing-the-mbari-workspace)).
 
 ---
 
@@ -141,6 +151,53 @@ The obstacle appears as a bright arc in the sonar image at roughly 5 m range.
 | `multiplicative` noise | 0.03 | 3% proportional noise |
 | `additive` noise | 0.05 | Background noise floor |
 | `colormap` | `hot` | Display colour (hot = black→red→yellow→white) |
+
+---
+
+## Editing the MBARI workspace
+
+The MBARI repo lives on your **host** at `optitrack-roboticslab-ws/MBARI-vehicles-sim-ros2/` and is bind-mounted read-write into the container at `/root/MBARI-vehicles-sim-ros2`. Edits you make on the host (or inside the container) are immediately visible on both sides and survive `docker compose down`.
+
+### First-time build (inside the container)
+
+After cloning on the host and starting the container for the first time, build both workspaces once:
+
+```bash
+docker compose exec ros2-jazzy bash
+
+# Inside the container:
+source /opt/ros/jazzy/setup.bash
+source /root/ros2_ws/install/setup.bash
+
+cd /root/MBARI-vehicles-sim-ros2/stonefish_ws
+colcon build
+
+cd /root/MBARI-vehicles-sim-ros2/gazebo_ws
+source /root/MBARI-vehicles-sim-ros2/stonefish_ws/install/setup.bash
+colcon build
+```
+
+The `build/`, `install/`, and `log/` directories are written into your host clone and persist across container restarts. The `.bashrc` inside the container sources these overlays automatically on the next shell open.
+
+### Iterating on a package
+
+```bash
+# Edit files on the host with your favourite editor, then rebuild only what changed:
+cd /root/MBARI-vehicles-sim-ros2/stonefish_ws   # or gazebo_ws
+colcon build --packages-select <package_name>
+source install/setup.bash
+```
+
+No `docker compose build` needed — only do that when you change the Dockerfile itself.
+
+### Things to be careful about
+
+| Concern | Detail |
+|---|---|
+| Absolute paths in install overlay | colcon bakes `/root/MBARI-vehicles-sim-ros2` into the overlay. Do **not** move or rename the host clone after the first build, or you must rebuild inside the container. |
+| Build artifacts are container-native | The `install/` tree won't work if run directly on the host (different architecture / library paths). |
+| `gazebo_ws` depends on `stonefish_ws` | Always build `stonefish_ws` first, and re-source it before building `gazebo_ws`. |
+| Stale overlays after a rebuild | If you run `docker compose build` and the image changes, open a fresh shell so `.bashrc` is re-evaluated. |
 
 ---
 

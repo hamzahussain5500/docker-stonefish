@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- Restrict CycloneDDS to the loopback interface only.
+     All containers use network_mode: host, so loopback is shared between them.
+     Without this, CycloneDDS discovers every machine on every attached Ethernet
+     interface (lab network, camera link-local) and floods logs with UDP write errors
+     when those machines don't have a CycloneDDS listener. -->
+<CycloneDDS>
+  <Domain id="any">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="lo" multicast="true" />
+      </Interfaces>
+    </General>
+    <Internal>
+      <!-- min must not exceed net.core.rmem_max on the host.
+           Default kernel cap is 2MB; raise it permanently:
+             sudo sysctl -w net.core.rmem_max=26214400
+             echo net.core.rmem_max=26214400 | sudo tee /etc/sysctl.d/99-ros2-dds.conf
+           CycloneDDS aborts domain creation if this min cannot be met. -->
+      <SocketReceiveBufferSize min="2MB"/>
+    </Internal>
+  </Domain>
+</CycloneDDS>
